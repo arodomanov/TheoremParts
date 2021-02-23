@@ -1,0 +1,188 @@
+% This package provides new environments and commands which can be useful
+% for splitting the statements in theorem-like environments (theorem, lemma,
+% proposition, etc.) and their proofs into several parts.
+%
+% Author: Anton Rodomanov
+%
+% ##############################################################################
+% "EnumerateClaims" environment.
+% ##############################################################################
+% Provides a special numbered list which can be used inside theorem-like
+% environments for enumerating the claims.
+%
+% Usage example:
+% ------------------------------------------------------------------------------
+% \usepackage{TheoremParts} % in the preamble
+%
+% \begin{proposition}
+%   For any real numbers $a$, $b$ and $c$, we have:
+%   \begin{EnumerateClaims}
+%     \item\label{Commutativity} $a + b = b + a$.
+%     \item\label{Associativity} $(a + b) + c = a + (b + c)$.
+%   \end{EnumerateClaims}
+% \end{proposition}
+%
+% \begin{proof}
+%   \LocalClaimReference{Commutativity} follows from ...
+%
+%   Let us prove \LocalClaimReference{Associativity}. First, note that ...
+% \end{proof}
+%
+% Thus, in view of proposition~\ref{Associativity}, the $+$ operation is
+% \emph{associative} on the set of reals.
+% ------------------------------------------------------------------------------
+%
+% Notes:
+%   - The default (global) reference, obtained by "\ref" or "\cref" commands
+%     (if "cleveref" package is loaded), contains both the number of the
+%     theorem-like environment, enclosing the claim, and the number of the
+%     claim itself. For instance, if the "proposition" in the example above has
+%     number 3, then "\ref{Associativity}" and "\cref{Associativity}" produce
+%     "3(ii)" and "proposition 3(ii)", respectively.
+%
+%   - Sometimes (for example, in the proof) it might be useful to obtain the
+%     simple (local) reference, containing just the claim number. For this, use
+%     the dedicated "\LocalClaimReference" command.
+%
+%   - In principle, the "EnumerateClaims" environment can be used even outside
+%     theorem-like environments. In this case, it simply produces a specially
+%     formatted enumerated list but does not modify any references (thus, "\ref"
+%     and "\cref" commands act as they usually do for the standard "enumerate"
+%     list). However, the real power of the "EnumerateClaims" environment comes
+%     from the referencing mechanism described above. By default, this mechanism
+%     is activated only inside the following theorem-like environments:
+%       - theorem
+%       - lemma
+%       - proposition
+%     If you want to add a new environment to this list, such as "remark",
+%     you can use the following command in the preamble:
+%       \EnumerateClaimsActivateInside{remark}
+%     Use this command several times if there are several such environments.
+%
+% ##############################################################################
+% "\ProofPart" command.
+% ##############################################################################
+% Marks the beginning of the new part inside the "proof" environment. Useful for
+% splitting a long proof into several parts.
+%
+% Usage example:
+% ------------------------------------------------------------------------------
+% \usepackage{TheoremParts} % in the preamble
+%
+% \begin{proof}
+%   \ProofPart
+%
+%   First, note that ...
+%
+%   Indeed, ...
+%
+%   \ProofPart
+%
+%   Now let us prove that ...
+% \end{proof}
+% ------------------------------------------------------------------------------
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\ProvidesPackage{TheoremParts}
+  [2021/02/23 v1.0 Splitting theorems into parts]
+\NeedsTeXFormat{LaTeX2e}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Load required packages.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\RequirePackage{etoolbox}
+\RequirePackage{enumitem}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Define "EnumerateClaims" environment.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newlist{EnumerateClaims}{enumerate}{1}
+\setlist[EnumerateClaims]{label={\upshape(\roman*)}}
+
+% Use "\p@counter" for storing the number of enclosing theorem-like environment.
+% Adapted from: https://tex.stackexchange.com/a/266734.
+\renewcommand{\p@EnumerateClaimsi}{%
+  \perh@ps{\EnumerateClaims@CurrentTheoremLikeEnvironment}%
+}
+\protected\def\perh@ps#1{#1}
+
+\newcommand{\LocalClaimReference}[1]{%
+  \begingroup% Locally disable "\perh@ps".
+    \let\perh@ps\@gobble%
+    \ref{#1}%
+  \endgroup
+}
+
+% The "\EnumerateClaims@TheoremLikeEnvironments" internal list contains all
+% theorem-like environments for which the referencing mechnaism needs to be
+% activated.
+\newcommand{\EnumerateClaimsActivateInside}[1]{
+  \listadd{\EnumerateClaims@TheoremLikeEnvironments}{#1}
+}
+
+% Process "\EnumerateClaims@TheoremLikeEnvironments" list at the end of preamble
+% to give the user an opportunity to activate additional theorem-like
+% environments.
+\AtEndPreamble{
+  % Save the number of the enclosing theorem-like environment.
+  \renewcommand*{\do}[1]{
+    \AtBeginEnvironment{#1}{
+      \letcs{\EnumerateClaims@CurrentTheoremLikeEnvironment}{the#1}
+    }
+  }
+  \dolistloop{\EnumerateClaims@TheoremLikeEnvironments}
+
+  % Set up the names for "cleveref" (if it is being used).
+  \@ifpackageloaded{cleveref}{
+    \crefalias{EnumerateClaimsi}{enumi}
+
+    \renewcommand*{\do}[1]{
+      \AtBeginEnvironment{#1}{\crefalias{EnumerateClaimsi}{#1}}
+    }
+    \dolistloop{\EnumerateClaims@TheoremLikeEnvironments}
+  }{}
+}
+
+% There is no enclosing theorem-like environment by default. Do nothing.
+\let\EnumerateClaims@CurrentTheoremLikeEnvironment\relax
+
+% Specify theorem-like environments which are activated by default.
+\EnumerateClaimsActivateInside{theorem}
+\EnumerateClaimsActivateInside{lemma}
+\EnumerateClaimsActivateInside{proposition}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Define "\ProofPart" command.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Ignores all the blank lines which follow.
+% Source: https://stackoverflow.com/a/7170248.
+\newcommand{\gobblepars}{%
+  \@ifnextchar{\par}{\expandafter\gobblepars\@gobble}{}%
+}
+
+\newcounter{ProofPart}
+\renewcommand{\theProofPart}{\roman{ProofPart}}
+
+\newcommand{\ProofPart}{%
+  \stepcounter{ProofPart}%
+  \theProofPart{.\ }%
+  \gobblepars
+}
+
+\AtBeginEnvironment{proof}{\setcounter{ProofPart}{0}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% The end.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\endinput
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
