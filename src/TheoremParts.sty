@@ -1,0 +1,108 @@
+% Copyright (C) 2022 Anton Rodomanov
+%
+% This file is part of the `TheoremParts` package.
+%
+% You may distribute and/or modify this code under the conditions
+% of the LaTeX Project Public License, version 1.3c or any later version.
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{TheoremParts}[2021/02/23 v0.1 Splitting theorems into parts]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Load required packages.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\RequirePackage{etoolbox}
+\RequirePackage{enumitem}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Define `EnumerateClaims` environment.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newlist{EnumerateClaims}{enumerate}{1}
+\setlist[EnumerateClaims]{label={\upshape(\roman*)}}
+
+% Use `\p@counter` for storing the number of enclosing theorem-like environment.
+% Adapted from https://tex.stackexchange.com/a/266734.
+\renewcommand{\p@EnumerateClaimsi}{%
+  \perh@ps{\EnumerateClaims@CurrentTheoremLikeEnvironment}%
+}
+\protected\def\perh@ps#1{#1}
+
+\newcommand{\LocalClaimReference}[1]{%
+  \begingroup% Locally disable `\perh@ps`.
+    \let\perh@ps\@gobble%
+    \ref{#1}%
+  \endgroup
+}
+
+% The `\EnumerateClaims@TheoremLikeEnvironments` internal list contains all
+% theorem-like environments for which the referencing mechnaism needs to be
+% activated.
+\newcommand{\EnumerateClaimsActivateInside}[1]{
+  \listadd{\EnumerateClaims@TheoremLikeEnvironments}{#1}
+}
+
+% Process `\EnumerateClaims@TheoremLikeEnvironments` list at the end of preamble
+% to give the user an opportunity to activate additional theorem-like
+% environments.
+\AtEndPreamble{
+  % Save the number of the enclosing theorem-like environment.
+  \renewcommand*{\do}[1]{
+    \AtBeginEnvironment{#1}{
+      \letcs{\EnumerateClaims@CurrentTheoremLikeEnvironment}{the#1}
+    }
+  }
+  \dolistloop{\EnumerateClaims@TheoremLikeEnvironments}
+
+  % Set up the names for `cleveref` (if it is being used).
+  \@ifpackageloaded{cleveref}{
+    \crefalias{EnumerateClaimsi}{enumi}
+
+    \renewcommand*{\do}[1]{
+      \AtBeginEnvironment{#1}{\crefalias{EnumerateClaimsi}{#1}}
+    }
+    \dolistloop{\EnumerateClaims@TheoremLikeEnvironments}
+  }{}
+}
+
+% There is no enclosing theorem-like environment by default. Do nothing.
+\let\EnumerateClaims@CurrentTheoremLikeEnvironment\relax
+
+% Specify theorem-like environments which are activated by default.
+\EnumerateClaimsActivateInside{theorem}
+\EnumerateClaimsActivateInside{lemma}
+\EnumerateClaimsActivateInside{proposition}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Define `\ProofPart` command.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Ignores all the blank lines which follow.
+% See: https://stackoverflow.com/a/7170248.
+\newcommand{\gobblepars}{%
+  %! parser = off
+  \@ifnextchar{\par}{\expandafter\gobblepars\@gobble}{}%
+  %! parser = on
+}
+
+\newcounter{ProofPart}
+\renewcommand{\theProofPart}{\roman{ProofPart}}
+
+\newcommand{\ProofPart}{%
+  \stepcounter{ProofPart}%
+  \theProofPart{.\ }%
+  \gobblepars
+}
+
+\AtBeginEnvironment{proof}{\setcounter{ProofPart}{0}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% The end.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\endinput
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

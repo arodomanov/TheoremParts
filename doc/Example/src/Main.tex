@@ -1,0 +1,79 @@
+% Copyright (C) 2022 Anton Rodomanov
+%
+% This file is part of the `TheoremParts` package.
+%
+% You may distribute and/or modify this code under the conditions
+% of the LaTeX Project Public License, version 1.3c or any later version.
+
+\documentclass{article}
+
+\usepackage{lipsum}
+\usepackage{amsthm}
+\usepackage{TheoremParts}
+\usepackage{hyperref}
+\usepackage{cleveref}
+
+\newtheorem{proposition}{Proposition}
+
+\begin{document}
+
+  \section{EnumerateClaims environment}
+
+  \begin{proposition}
+    For any real numbers $a$, $b$ and $c$, we have:
+    \begin{EnumerateClaims}
+      \item\label{Commutativity} $a + b = b + a$.
+      \item\label{Associativity} $(a + b) + c = a + (b + c)$.
+    \end{EnumerateClaims}
+  \end{proposition}
+
+  \begin{proof}
+    \LocalClaimReference{Commutativity} follows from \dots
+
+    Let us prove \LocalClaimReference{Associativity}. First, note that \dots
+  \end{proof}
+
+  Thus, in view of proposition~\ref{Associativity}, the ``$+$`` operation is \emph{associative} on the set of reals.
+
+  We can also use cleveref: \cref{Associativity}.
+
+
+  \section{ProofPart command}
+
+  \begin{proposition}
+    \lipsum[5][1]
+  \end{proposition}
+
+  \begin{proof}
+    \ProofPart
+
+    \lipsum[1][1-5]
+
+    \lipsum[2][1-3]
+
+    \lipsum[3][1-2]
+
+    \ProofPart
+
+    \lipsum[4][1-3]
+
+    \lipsum[4][4-8]
+  \end{proof}
+
+  \begin{proposition}
+    \lipsum[5][2]
+  \end{proposition}
+
+  \begin{proof}
+    \ProofPart
+
+    \lipsum[1][1-5]
+
+    \lipsum[1][4-5]
+
+    \ProofPart
+
+    \lipsum[1][1-3]
+  \end{proof}
+
+\end{document}
